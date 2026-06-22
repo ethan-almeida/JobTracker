@@ -1,122 +1,155 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect, useCallback } from "react";
+import type { Job } from "./types";
+import { STATUS_OPTIONS } from "./types";
+import { getJobs, createJob, updateJob, deleteJob } from "./api";
+import JobForm from "./components/JobForm";
+import JobCard from "./components/JobCard";
+import JobDetail from "./components/JobDetail";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [filter, setFilter] = useState<string>("All");
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Job | null>(null);
+
+  const fetchJobs = useCallback(() => {
+    getJobs().then(setJobs).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
+  const filteredJobs =
+    filter === "All" ? jobs : jobs.filter((j) => j.status === filter);
+
+  const handleCreate = async (data: {
+    company: string;
+    title: string;
+    location: string;
+    status: string;
+    job_id: string;
+    notes: string;
+  }) => {
+    await createJob(data);
+    setShowForm(false);
+    fetchJobs();
+  };
+
+  const handleUpdate = async (data: {
+    company: string;
+    title: string;
+    location: string;
+    status: string;
+    job_id: string;
+    notes: string;
+  }) => {
+    if (!editing) return;
+    await updateJob(editing.id, data);
+    setEditing(null);
+    setShowForm(false);
+    setSelectedJob(null);
+    fetchJobs();
+  };
+
+  const handleDelete = async (id: number) => {
+    await deleteJob(id);
+    setSelectedJob(null);
+    fetchJobs();
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-gray-900">Job Tracker</h1>
         <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+          onClick={() => {
+            setEditing(null);
+            setShowForm(true);
+          }}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium"
         >
-          Count is {count}
+          + Add Job
         </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
+      {/* Filter bar */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex gap-2 overflow-x-auto">
+        {["All", ...STATUS_OPTIONS].map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${
+              filter === s
+                ? "bg-indigo-100 text-indigo-700"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {/* Main content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Job list */}
+        <div className="w-1/2 overflow-y-auto border-r border-gray-200 p-4 space-y-3">
+          {filteredJobs.length === 0 && (
+            <p className="text-gray-400 text-center mt-12">
+              {filter === "All"
+                ? "No jobs yet. Click '+ Add Job' to get started."
+                : `No jobs with status "${filter}".`}
+            </p>
+          )}
+          {filteredJobs.map((job) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              selected={selectedJob?.id === job.id}
+              onClick={() => setSelectedJob(job)}
+              onEdit={() => {
+                setEditing(job);
+                setShowForm(true);
+              }}
+              onDelete={() => handleDelete(job.id)}
+            />
+          ))}
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* Detail panel */}
+        <div className="w-1/2 overflow-y-auto p-4">
+          {selectedJob ? (
+            <JobDetail
+              job={selectedJob}
+              onEdit={() => {
+                setEditing(selectedJob);
+                setShowForm(true);
+              }}
+              onDelete={() => handleDelete(selectedJob.id)}
+            />
+          ) : (
+            <p className="text-gray-400 text-center mt-12">
+              Select a job to view details
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Modal */}
+      {showForm && (
+        <JobForm
+          job={editing}
+          onSave={editing ? handleUpdate : handleCreate}
+          onClose={() => {
+            setShowForm(false);
+            setEditing(null);
+          }}
+        />
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;

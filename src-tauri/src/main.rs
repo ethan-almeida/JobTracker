@@ -1,6 +1,7 @@
 use std::sync::Mutex;
 use tauri::Manager;
 mod db;
+mod commands;
 
 pub struct AppState{
     pub db: Mutex<db::Database>,
@@ -25,7 +26,14 @@ fn main() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![check_db])
+        .invoke_handler(tauri::generate_handler![
+            check_db,
+            commands::create_job,
+            commands::get_jobs,
+            commands::get_job,
+            commands::update_job,
+            commands::delete_job,
+        ])
         .run(tauri::generate_context!())
         .expect("error running the job tracker");
 }
