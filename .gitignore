@@ -26,3 +26,6 @@ src-tauri/target/
 src-tauri/gen/
 data/
 documents/
+
+*.db-shm
+*.db-wal
