@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 
-fn app_root() -> PathBuf {
+pub(crate) fn app_root() -> PathBuf {
     #[cfg(debug_assertions)]
     {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -32,6 +32,16 @@ pub struct Job {
     pub notes: String,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Document {
+    pub id: i64, 
+    pub job_id: i64,
+    pub filename: String,
+    pub original_name: String,
+    pub file_type: String,
+    pub created_at: String,
 }
 
 pub struct Database {
@@ -165,6 +175,70 @@ impl Database {
 
     pub fn delete_job(&self, id: i64) -> Result<(), rusqlite::Error> {
         self.conn.execute("DELETE FROM jobs WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn create_document(
+        &self,
+        job_id: i64,
+        filename: &str,
+        original_name: &str,
+        file_type: &str,
+    ) -> Result<i64, rusqlite::Error> {
+        self.conn.execute(
+            "INSERT INTO documents (job_id, filename, original_name, file_type)
+            VALUES (?1, ?2, ?3, ?4)",
+            params![job_id, filename, original_name, file_type],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    pub fn get_documents(&self, job_id: i64) -> Result<Vec<Document>, rusqlite::Error> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, job_id, filename, original_name, file_type, created_at
+            FROM documents WHERE job_id = ?1 ORDER BY created_at DESC"
+        )?;
+        let rows = stmt.query_map(params![job_id], |row| {
+            Ok(Document {
+                id: row.get(0)?,
+                job_id: row.get(1)?,
+                filename: row.get(2)?,
+                original_name: row.get(3)?,
+                file_type: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        })?;
+        let mut docs = Vec::new();
+        for row in rows {
+            docs.push(row?);
+        }
+        Ok(docs)
+    }
+
+    pub fn get_document(&self, id: i64) -> Result<Option<Document>, rusqlite::Error> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, job_id, filename, original_name, file_type, created_at
+            FROM documents WHERE id = ?1"
+        )?;
+        let mut rows = stmt.query_map(params![id], |row| {
+            Ok(Document {
+                id: row.get(0)?,
+                job_id: row.get(1)?,
+                filename: row.get(2)?,
+                original_name: row.get(3)?,
+                file_type: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        })?;
+        match rows.next() {
+            Some(Ok(doc)) => Ok(Some(doc)),
+            Some(Err(e)) => Err(e),
+            None => Ok(None),
+        }
+    }
+
+    pub fn delete_document(&self, id: i64) -> Result<(), rusqlite::Error> {
+        self.conn.execute("DELETE FROM documents WHERE id = ?1", params![id])?;
         Ok(())
     }
 }

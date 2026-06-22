@@ -40,3 +40,20 @@ export type FormData = {
   job_id: string;
   notes: string;
 };
+
+export interface Document {
+  id: number;
+  job_id: number;
+  filename: string;
+  original_name: string;
+  file_type: string;
+  created_at: string;
+}
+
+export const DOCUMENT_TYPES = [
+  "Resume",
+  "Cover Letter",
+  "Transcript",
+  "Portfolio",
+  "Other",
+] as const;

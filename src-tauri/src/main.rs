@@ -19,6 +19,7 @@ fn check_db(state: tauri::State<AppState>) -> Result<String, String> {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let database = db::Database::init().expect("failed to init db");
             app.manage(AppState {

@@ -1,5 +1,13 @@
-import type { Job } from "../types";
-import { STATUS_COLORS, STATUS_OPTIONS } from "../types";
+import { useState, useEffect } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
+import type { Job, Document } from "../types";
+import { STATUS_COLORS, DOCUMENT_TYPES } from "../types";
+import {
+  getDocuments,
+  attachDocument,
+  deleteDocument,
+  openDocument,
+} from "../api";
 
 interface Props {
   job: Job;
@@ -8,6 +16,51 @@ interface Props {
 }
 
 export default function JobDetail({ job, onEdit, onDelete }: Props) {
+  const [docs, setDocs] = useState<Document[]>([]);
+  const [showAttach, setShowAttach] = useState(false);
+  const [attachType, setAttachType] = useState<string>("Resume");
+  const [attaching, setAttaching] = useState(false);
+
+  const fetchDocs = () => {
+    getDocuments(job.id).then(setDocs).catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchDocs();
+  }, [job.id]);
+
+  const handleAttach = async () => {
+    const file = await open({
+      multiple: false,
+      filters: [
+        {
+          name: "Documents",
+          extensions: [
+            "pdf", "doc", "docx", "txt", "rtf",
+            "png", "jpg", "jpeg", "md",
+          ],
+        },
+      ],
+    });
+
+    if (!file) return;
+
+    setAttaching(true);
+    try {
+      await attachDocument(job.id, file, attachType);
+      fetchDocs();
+      setShowAttach(false);
+    } finally {
+      setAttaching(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this attachment?")) return;
+    await deleteDocument(id);
+    fetchDocs();
+  };
+
   const created = new Date(job.created_at + "Z").toLocaleString("en-US", {
     month: "short",
     day: "numeric",
@@ -85,14 +138,82 @@ export default function JobDetail({ job, onEdit, onDelete }: Props) {
         </button>
       </div>
 
-      {/* Placeholder for Phase 3 */}
+      {/* Attachments section */}
       <div className="mt-6 pt-4 border-t border-gray-100">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">
-          Attachments
-        </h3>
-        <p className="text-xs text-gray-400">
-          Document management coming in the next update.
-        </p>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-gray-500">
+            Attachments ({docs.length})
+          </h3>
+          <button
+            onClick={() => setShowAttach(!showAttach)}
+            className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+          >
+            {showAttach ? "Cancel" : "+ Attach File"}
+          </button>
+        </div>
+
+        {/* Attach form */}
+        {showAttach && (
+          <div className="mb-3 p-3 bg-gray-50 rounded-lg flex items-center gap-3">
+            <select
+              value={attachType}
+              onChange={(e) => setAttachType(e.target.value)}
+              className="border border-gray-300 rounded px-2 py-1.5 text-xs"
+            >
+              {DOCUMENT_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleAttach}
+              disabled={attaching}
+              className="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {attaching ? "Uploading..." : "Browse & Attach"}
+            </button>
+          </div>
+        )}
+
+        {/* Document list */}
+        {docs.length === 0 && !showAttach && (
+          <p className="text-xs text-gray-400">
+            No attachments yet.
+          </p>
+        )}
+
+        <div className="space-y-2">
+          {docs.map((doc) => (
+            <div
+              key={doc.id}
+              className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs font-medium text-gray-500 bg-white px-1.5 py-0.5 rounded border border-gray-200 shrink-0">
+                  {doc.file_type}
+                </span>
+                <span className="text-sm text-gray-900 truncate">
+                  {doc.original_name}
+                </span>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <button
+                  onClick={() => openDocument(doc.id)}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 px-1"
+                >
+                  Open
+                </button>
+                <button
+                  onClick={() => handleDelete(doc.id)}
+                  className="text-xs text-red-500 hover:text-red-700 px-1"
+                >
+                  Del
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
