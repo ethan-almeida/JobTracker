@@ -66,3 +66,9 @@ export function parsePdf(path: string) {
   return invoke<ParsedJob>("parse_pdf", { path });
 }
 
+export function parseUrl(url: string) {
+  return invoke<ParsedJob>("parse_url", { url });
+}
+
+
+

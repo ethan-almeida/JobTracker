@@ -40,6 +40,7 @@ fn main() {
             commands::delete_document,
             commands::open_document,
             commands::parse_pdf,
+            commands::parse_url,
         ])
         .run(tauri::generate_context!())
         .expect("error running the job tracker");

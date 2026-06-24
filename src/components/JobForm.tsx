@@ -2,7 +2,7 @@ import { useState } from "react";
 import { STATUS_OPTIONS } from "../types";
 import type { Job, FormData } from "../types";
 import { open } from "@tauri-apps/plugin-dialog";
-import { parsePdf } from "../api";
+import { parsePdf, parseUrl } from "../api";
 
 interface Props {
   job?: Job | null;
@@ -21,6 +21,8 @@ export default function JobForm({ job, onSave, onClose }: Props) {
   });
   const [saving, setSaving] = useState(false);
   const [parsing, setParsing] = useState(false);
+  const [url, setUrl] = useState("");
+  const [parsingUrl, setParsingUrl] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +129,39 @@ export default function JobForm({ job, onSave, onClose }: Props) {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 pt-3 mt-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Or parse from URL
+            </label>
+            <div className="flex gap-2">
+              <input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://example.com/jobs/..."
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!url.trim()) return;
+                  setParsingUrl(true);
+                  try {
+                    const parsed = await parseUrl(url.trim());
+                    setData((prev) => ({ ...prev, ...parsed }));
+                  } catch (e) {
+                    alert("Failed to parse URL: " + e);
+                  } finally {
+                    setParsingUrl(false);
+                  }
+                }}
+                disabled={parsingUrl || !url.trim()}
+                className="px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap"
+              >
+                {parsingUrl ? "Parsing..." : "Parse URL"}
+              </button>
             </div>
           </div>
 

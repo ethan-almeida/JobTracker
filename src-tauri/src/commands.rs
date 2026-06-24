@@ -212,3 +212,28 @@ pub fn parse_pdf(path: String) -> Result<ParsedJob, String> {
         .map_err(|e| format!("failed to parse parser output: {}", e))
 }
 
+
+// parse url functions
+
+#[tauri::command]
+pub fn parse_url(url: String) -> Result<ParsedJob, String> {
+    let root = crate::db::app_root();
+    let python = root.join("sidecar_parse/venv/bin/python3");
+    let script = root.join("sidecar_parse/src/main.py");
+
+    let output = std::process::Command::new(&python)
+        .arg(&script)
+        .arg("parse-url")
+        .arg(&url)
+        .output()
+        .map_err(|e| format!("failed to run parser: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.trim().to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    serde_json::from_str(&stdout)
+        .map_err(|e| format!("failed to parse parser output: {}", e))
+}
