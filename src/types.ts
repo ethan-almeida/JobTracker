@@ -57,3 +57,10 @@ export const DOCUMENT_TYPES = [
   "Portfolio",
   "Other",
 ] as const;
+
+export interface ParsedJob {
+  company: string;
+  title: string;
+  location: string;
+  job_id: string;
+}

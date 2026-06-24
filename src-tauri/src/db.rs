@@ -44,6 +44,14 @@ pub struct Document {
     pub created_at: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ParsedJob {
+    pub company: String,
+    pub title: String,
+    pub location: String, 
+    pub job_id: String,
+}
+
 pub struct Database {
     pub conn: Connection,
 }

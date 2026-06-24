@@ -50,6 +50,8 @@ export default function JobDetail({ job, onEdit, onDelete }: Props) {
       await attachDocument(job.id, file, attachType);
       fetchDocs();
       setShowAttach(false);
+    } catch (e) {
+      alert("Failed to attach: " + e);
     } finally {
       setAttaching(false);
     }

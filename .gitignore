@@ -29,3 +29,4 @@ documents/
 
 *.db-shm
 *.db-wal
+sidecar_parse/venv/

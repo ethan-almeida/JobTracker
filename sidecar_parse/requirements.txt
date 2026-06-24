@@ -1,0 +1,4 @@
+pdfplumber
+httpx
+beautifulsoup4
+cloudscraper

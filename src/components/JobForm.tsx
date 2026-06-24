@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { STATUS_OPTIONS } from "../types";
 import type { Job, FormData } from "../types";
+import { open } from "@tauri-apps/plugin-dialog";
+import { parsePdf } from "../api";
 
 interface Props {
   job?: Job | null;
@@ -18,6 +20,7 @@ export default function JobForm({ job, onSave, onClose }: Props) {
     notes: job?.notes ?? "",
   });
   const [saving, setSaving] = useState(false);
+  const [parsing, setParsing] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,12 +40,39 @@ export default function JobForm({ job, onSave, onClose }: Props) {
           <h2 className="text-lg font-semibold">
             {job ? "Edit Job" : "Add Job"}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl"
-          >
-            ×
-          </button>
+          <div className="flex items-center gap-2">
+            {!job && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const file = await open({
+                    multiple: false,
+                    filters: [{ name: "PDF", extensions: ["pdf"] }],
+                  });
+                  if (!file) return;
+                  setParsing(true);
+                  try {
+                    const parsed = await parsePdf(file);
+                    setData((prev) => ({ ...prev, ...parsed }));
+                  } catch (e) {
+                    alert("Failed to parse PDF: " + e);
+                  } finally {
+                    setParsing(false);
+                  }
+                }}
+                disabled={parsing}
+                className="text-xs px-3 py-1.5 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+              >
+                {parsing ? "Parsing..." : "Parse PDF"}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-xl"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,6 +1,7 @@
 use crate::db::{self, Job, Document};
 use crate::AppState;
 use std::path::PathBuf;
+use crate::db::ParsedJob;
 
 #[tauri::command]
 pub fn create_job(
@@ -185,3 +186,29 @@ pub fn open_document(state: tauri::State<AppState>, id: i64) -> Result<(), Strin
 
     open::that(&file_path).map_err(|e| e.to_string())
 }
+
+// parse pdf related-functions
+
+#[tauri::command]
+pub fn parse_pdf(path: String) -> Result<ParsedJob, String> {
+    let root = crate::db::app_root();
+    let python = root.join("sidecar_parse/venv/bin/python3");
+    let script = root.join("sidecar_parse/src/main.py");
+
+    let output = std::process::Command::new(&python)
+        .arg(&script)
+        .arg("parse-pdf")
+        .arg(&path)
+        .output()
+        .map_err(|e| format!("failed to run parser: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.trim().to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    serde_json::from_str(&stdout)
+        .map_err(|e| format!("failed to parse parser output: {}", e))
+}
+

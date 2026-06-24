@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Job, FormData } from "./types";
 import type { Document } from "./types";
+import type { ParsedJob } from "./types";
 
 export function checkDb() {
   return invoke<string>("check_db");
@@ -60,3 +61,8 @@ export function deleteDocument(id: number){
 export function openDocument(id: number) {
   return invoke<void>("open_document", { id });
 }
+
+export function parsePdf(path: string) {
+  return invoke<ParsedJob>("parse_pdf", { path });
+}
+
